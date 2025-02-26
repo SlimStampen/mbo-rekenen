@@ -67,3 +67,5 @@ ggplot(tests, aes(x = test, y = score)) +
   theme_ml()
 
 ggsave(here("output", "test_scores_noorderpoort.png"), width = 8, height = 6)
+
+fwrite(tests, here("data", "test", "noorderpoort_scores_by_topic.csv"))
