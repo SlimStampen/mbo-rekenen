@@ -1,0 +1,662 @@
+---
+title: "Usage statistics"
+subtitle: "MBO rekenen pilot 2024"
+author: "Maarten van der Velde"
+date: "Last updated: `r Sys.Date()`"
+output:
+  html_notebook:
+    smart: no
+    toc: yes
+    toc_float: yes
+  github_document:
+    toc: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+library(here)
+library(data.table)
+library(ggplot2)
+library(jsonlite)
+library(purrr)
+
+theme_memorylab_url <- "https://raw.githubusercontent.com/SlimStampen/theme_memorylab/master/theme_memorylab.R"
+source(theme_memorylab_url)
+
+source(here("..", "databases", "database_functions.R"))
+```
+
+# Noorderpoort
+
+```{r}
+np_domain <- query_db("SELECT * FROM domain WHERE name = 'noorderpoort.memorylab.app';", database = "slimstampen")
+```
+
+Users registered on this domain:
+```{r}
+np_users <- query_db(paste0("SELECT id AS user_id, email FROM users WHERE domain_id = ", np_domain$id, ";"), database = "slimstampen")
+```
+
+Lessons on this domain:
+```{r}
+np_lessons <- query_db(paste0("SELECT * FROM lesson WHERE domain_id = ", np_domain$id, ";"), database = "slimstampen")
+```
+
+Sessions from users on this domain during the pilot period:
+```{r}
+np_sessions <- query_db(paste0("SELECT * FROM session WHERE token_id = 2 AND user_id IN (", paste(np_users$user_id, collapse = ", "), ");"), database = "ssaas")
+np_sessions <- np_sessions[create_time > "2024-10-06"][create_time < "2024-11-05"]
+```
+
+When were these sessions?
+```{r}
+np_sessions[, session_date := as.Date(create_time)]
+
+np_test_dates <- data.table(test = c("Toets 1", "Toets 2"),
+                            date = as.Date(c("2024-10-07", "2024-11-04")))
+
+ggplot(np_sessions, aes(x = session_date)) +
+  geom_vline(data = np_test_dates, aes(xintercept = date), linetype = "dashed", colour = "grey50") +
+  geom_label(data = np_test_dates, aes(x = date, y = Inf, label = test), vjust = 1.05, hjust = .5, colour = "grey50") +
+  geom_histogram(binwidth = 1, fill = colours_memorylab[1]) +
+  labs(x = "Datum", y = "MemoryLab oefensessies per dag", title = "MemoryLab oefenactiviteit over de tijd") +
+  scale_x_date(date_labels = "%d/%m", date_breaks = "1 week", limits = c(as.Date("2024-10-06"), as.Date("2024-11-05"))) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey90"))
+
+ggsave(here("output", "memorylab_oefensessies_over_tijd.png"), width = 10, height = 5)
+```
+
+```{r}
+```
+
+Most popular days:
+```{r}
+np_sessions[, .N, by = .(session_date)][order(-N)]
+```
+Total sessions:
+```{r}
+nrow(np_sessions)
+```
+
+Sessions per user:
+```{r}
+np_sessions[, .N, by = user_id][order(-N)]
+```
+
+Total users with at least one session:
+```{r}
+length(unique(np_sessions$user_id))
+```
+
+
+Which lessons did users do? Parse the session context:
+```{r}
+np_sessions[, context_parsed := map(context, function (x) {
+  x <- fromJSON(x)
+  data.table(lesson_id = x$lessonId,
+             lesson_group_id = x$lessonGroupId,
+             title = x$title)
+})]
+
+np_sessions_parsed <- np_sessions[, rbindlist(context_parsed), by = .(session_id = id, user_id, create_time, session_date)]
+```
+
+Practice by lesson:
+```{r}
+np_sessions_parsed[, .(`Keer geoefend` = .N), by = .(Les = title)][order(-`Keer geoefend`)] |> knitr::kable()
+```
+
+We can link each practice session to one of the test topics:
+```{r}
+np_lesson_groups <- data.table(
+  lesson_group_id = c(
+    29092,
+    29087,
+    29096,
+    29089,
+    29098,
+    29086,
+    29097,
+    29095,
+    29090,
+    29088,
+    29094,
+    29091),
+  topic = c(
+    "Rekentaal",
+    "Breuken",
+    "Percentage",
+    "Eenheden",
+    "Delen",
+    "Afronden",
+    "Cijfers",
+    "Vermenigvuldigen",
+    "Aftrekken & Optellen",
+    "Decimalen",
+    "Tafels",
+    "Rekentaal"
+  )
+)
+
+# Set lesson topics to the right order
+np_lesson_groups[, topic := factor(topic, levels = c("Delen",
+                                                     "Percentage",
+                                                     "Cijfers",
+                                                     "Breuken",
+                                                     "Tafels",
+                                                     "Decimalen",
+                                                     "Aftrekken & Optellen",
+                                                     "Vermenigvuldigen",
+                                                     "Afronden",
+                                                     "Eenheden",
+                                                     "Rekentaal"))]
+
+
+np_lessons <- merge(np_lessons, np_lesson_groups, by = "lesson_group_id")
+np_sessions_parsed <- merge(np_sessions_parsed, np_lesson_groups, by = "lesson_group_id")
+```
+
+Practice by lesson topic:
+```{r}
+np_sessions_parsed[, .(`Keer geoefend` = .N), by = .(Onderwerp = topic)][order(-`Keer geoefend`)] |> knitr::kable()
+```
+
+Bar plot of sessions per topic:
+```{r}
+np_sessions_parsed[, .(`Keer geoefend` = .N), by = .(Onderwerp = topic)] |>
+  ggplot(aes(x = Onderwerp, y = `Keer geoefend`)) +
+  geom_col(fill = colours_memorylab[1]) +
+  labs(x = "Onderwerp", y = "Keer geoefend", caption = "Data from noorderpoort.memorylab.app") +
+  theme_ml()
+```
+
+
+Mastery credits:
+```{r}
+np_credits <- query_db(paste0("SELECT * FROM lesson_mastered WHERE user_id IN (", paste(np_users$user_id, collapse = ", "), ");"), database = "slimstampen")
+
+# Add lesson titles and topics
+np_credits <- merge(np_credits, np_lessons[, .(lesson_id = id, title, topic)])
+```
+
+Credits by topic:
+```{r}
+np_credits[, .N, by = .(topic)][order(-N)]
+```
+
+Responses from these user_ids:
+```{r}
+np_responses <- query_db(paste0("SELECT * FROM response WHERE token_id = 2 AND user_id IN (", paste(np_users$user_id, collapse = ", "), ");"), database = "ssaas")
+np_responses <- np_responses[create_time > "2024-10-06"][create_time < "2024-11-05"]
+
+# Add lesson titles and topics
+np_responses <- merge(np_responses, np_sessions_parsed[, .(session_id, title, topic)], by = "session_id")
+```
+
+Responses by user:
+```{r}
+np_responses[, .N, by = .(user_id)][order(-N)]
+```
+
+Responses by topic:
+```{r}
+np_responses[, .N, by = .(topic)][order(-N)]
+```
+
+
+
+
+
+```{r}
+ggplot(np_responses, aes(x = as.Date(create_time))) +
+  geom_histogram(binwidth = 1, fill = colours_memorylab[1]) +
+  labs(x = "Date", y = "Responses per day", caption = "Data from noorderpoort.memorylab.app") +
+  scale_y_continuous(expand = c(0, 0), labels = scales::number_format(big.mark = ",")) +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey90"))
+```
+ 
+Split by lesson topic:
+```{r}
+ggplot(np_responses, aes(x = as.Date(create_time))) +
+  geom_histogram(aes(fill = topic), binwidth = 1) +
+  labs(x = "Date", y = "Responses per day", fill = "Onderwerp", caption = "Data from noorderpoort.memorylab.app") +
+  scale_y_continuous(expand = c(0, 0), labels = scales::number_format(big.mark = ",")) +
+  scale_fill_viridis_d() +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey90"))
+
+```
+ 
+
+## How does study behaviour on specific topics relate to test performance?
+
+We want to see whether studying a specific topic is related to an increase in test performance.
+Studying behaviour can be summarised in several ways: time spent, number of sessions, number of questions answered, number of credits achieved.
+
+```{r}
+np_session_stats <- np_responses[, .(
+  n_responses = .N,
+  duration = max(presentation_start_time) + presentation_duration[which.max(presentation_start_time)] - min(presentation_start_time),
+  accuracy = mean(correct)
+), by = .(user_id, topic, session_id)]
+
+np_practice_stats <- np_session_stats[, .(
+  n_sessions = .N,
+  n_responses = sum(n_responses),
+  duration = sum(duration),
+  accuracy = mean(accuracy)
+), by = .(user_id, topic)]
+```
+
+Load test scores per topic:
+```{r}
+np_test_scores <- fread(here("data", "test", "noorderpoort_scores_by_topic.csv"))
+np_test_scores[, Email := tolower(trimws(Email))]
+
+# Link to MemoryLab user IDs
+np_test_scores <- merge(np_test_scores, np_users, by.x = "Email", by.y = "email", all = TRUE)
+```
+
+There are some test scores for which we don't have any associated MemoryLab data:
+```{r}
+np_test_scores[is.na(user_id), .(unique(Email))]
+```
+
+There are also some MemoryLab users for which we don't have any associated test scores:
+```{r}
+np_test_scores[is.na(component), .(unique(Email))]
+```
+
+For this analysis we'll only include users of whom we have two test scores as well as some MemoryLab practice data.
+```{r}
+np_test_scores[, did_ml := !is.na(user_id)]
+np_test_scores[, two_tests := uniqueN(test) == 2, by = .(user_id)]
+np_test_scores[, include_user := did_ml & two_tests]
+```
+
+Mean test scores from included students:
+```{r}
+np_test_scores[include_user == TRUE & component == "Totaal punten", .(mean_grade = 10*mean(score)/40), by = test]
+```
+
+Distribution of test scores:
+```{r}
+np_test_scores[include_user == TRUE & component == "Totaal punten", .(test, score)] |>
+  ggplot(aes(x = 10*score/40, fill = test)) +
+  geom_density(alpha = 0.5) +
+  labs(x = "Score", y = "Density", fill = "Test", caption = "Data from noorderpoort.memorylab.app") +
+  scale_x_continuous(breaks = seq(0, 10, 1), limits = c(0, 10)) +
+  theme_ml()
+```
+
+Do a paired t-test to show that the difference is significant:
+```{r}
+test_score_dat <- np_test_scores[include_user == TRUE & component == "Totaal punten", .(user_id, test, score)] |>
+  dcast(user_id ~ test, value.var = "score")
+
+test_score_dat
+
+t.test(test_score_dat$Posttest, test_score_dat$Pretest, paired = TRUE)
+```
+
+
+
+Combine data:
+```{r}
+np_scores <- np_test_scores[include_user == TRUE & !component %in% c("Totaal punten", "Cijfer"), .(
+  user_id,
+  topic = component,
+  score,
+  test
+)]
+np_scores <- dcast(np_scores, user_id + topic ~ test, value.var = "score")
+setnames(np_scores, c("Posttest", "Pretest"), c("score_test_2", "score_test_1"))
+np_scores[, score_test_change := score_test_2 - score_test_1]
+# np_scores[, topic := factor(topic, levels = c("Delen",
+#                                               "Percentage",
+#                                               "Cijfers",
+#                                               "Breuken",
+#                                               "Tafels",
+#                                               "Decimalen",
+#                                               "Aftrekken & Optellen",
+#                                               "Vermenigvuldigen",
+#                                               "Afronden",
+#                                               "Eenheden",
+#                                               "Rekentaal"))]
+
+np_scores_and_practice <-  merge(np_scores, np_practice_stats, by = c("user_id", "topic"), all.x = TRUE)
+
+# If a user has no practice data, we'll fill in zeros
+np_scores_and_practice[is.na(n_sessions), n_sessions := 0]
+np_scores_and_practice[is.na(n_responses), n_responses := 0]
+np_scores_and_practice[is.na(duration), duration := 0]
+```
+
+
+Plot of scores:
+```{r}
+mean_scores <- np_scores_and_practice[, .(score_test_1 = mean(score_test_1), score_test_2 = mean(score_test_2)), by = .(topic)] |>
+  melt(id.vars = "topic", variable.name = "test", value.name = "score")
+
+p_scores <- melt(np_scores_and_practice, measure.vars = c("score_test_1", "score_test_2"), variable.name = "test", value.name = "score") |>
+  ggplot(aes(x = test, y = score)) +
+  facet_wrap(~ topic, ncol = 5) +
+  geom_point(alpha = .4, size = .5) +
+  geom_line(aes(group = user_id), alpha = .4, lty = 3) +
+  geom_point(data = mean_scores, colour = colours_memorylab[1], size = 2.5) +
+  geom_line(data = mean_scores, aes(group = topic), colour = colours_memorylab[1], lwd = 1) +
+  scale_x_discrete(labels = c("1", "2")) +
+  labs(x = "Toetsmoment", y = "Score", title = "Toetsscores") +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey90"),
+        strip.text = element_text(face = "bold")
+        )
+
+p_scores
+
+ggsave(here("output", "testscores_noorderpoort.png"), width = 8, height = 5)
+
+```
+
+How much was each topic practiced?
+```{r}
+ggplot(np_scores_and_practice, aes(x = n_responses)) +
+  facet_wrap(~ topic, ncol = 5) +
+  geom_histogram(binwidth = 20, fill = colours_memorylab[1]) +
+  labs(x = "Number of practice responses per student", y = "Frequency", colour = "Topic", caption = "Data from noorderpoort.memorylab.app") +
+  theme_ml()
+```
+
+Did students choose to practice topics on which their pretest score was low?
+```{r}
+# Add mean pretest scores per topic
+mean_pretest_scores <- mean_scores[test == "score_test_1", .(topic, mean_score = round(score, 2))]
+np_scores_and_practice <- merge(np_scores_and_practice, mean_pretest_scores, by = "topic")
+np_scores_and_practice[, topic_label := paste0(topic, "\n(Gemiddelde score: ", mean_score, ")")]
+
+ggplot(np_scores_and_practice, aes(x = score_test_1, y = n_responses)) +
+  facet_wrap(~ topic_label, ncol = 5) +
+  geom_point(aes(fill = as.factor(score_test_1)), colour = "black", alpha = .8, position = position_jitter(height = 0, width = .1, seed = 0), pch = 21) +
+  scale_fill_brewer(palette = "RdYlGn") +
+  guides(fill = "none") +
+  labs(x = "Score op Toets 1", y = "Aantal gemaakte MemoryLab oefeningen", colour = "Onderwerp", caption = "noorderpoort.memorylab.app") +
+  theme_ml() +
+  theme(panel.grid.major.x = element_line(colour = "grey90"),
+        panel.grid.major.y = element_line(colour = "grey90"),
+        strip.text = element_text(face = "bold"))
+```
+
+Interpretation: not really.
+
+
+Same plot but with totals instead of individual values:
+```{r}
+p_practice <- np_scores_and_practice[, .(n_sessions_total = sum(n_sessions)), by = .(topic_label, score_test_1)] |>
+  ggplot(aes(x = score_test_1, y = n_sessions_total)) +
+  facet_wrap(~ topic_label, ncol = 5) +
+  geom_col(aes(fill = as.factor(score_test_1)), colour = "black", alpha = .8) +
+  scale_fill_brewer(palette = "RdYlGn") +
+  guides(fill = "none") +
+  labs(x = "Score op Toets 1", y = "Aantal MemoryLab oefensessies", colour = "Onderwerp", title = "Oefenactiviteit") +
+  theme_ml() +
+  theme(panel.grid.major.x = element_line(colour = "grey90"),
+        panel.grid.major.y = element_line(colour = "grey90"),
+        strip.text = element_text(face = "bold"))
+
+p_practice
+
+ggsave(here("output", "memorylab_oefensessies_noorderpoort.png"), width = 9, height = 5)
+```
+
+
+Combined plot:
+```{r}
+library(patchwork)
+
+p_scores + p_practice + plot_layout(ncol = 1)
+ggsave(here("output", "memorylab_oefening_en_scores_noorderpoort.png"), width = 10, height = 10)
+```
+
+
+
+Is there a relation between score change and the number of practice sessions?
+```{r}
+np_scores_and_practice[, .(n_sessions = sum(n_sessions), score_test_change = mean(score_test_change)), by = .(topic_label)]
+
+ggplot(np_scores_and_practice, aes(x = n_sessions, y = score_test_change)) +
+  facet_wrap(~ topic) +
+  geom_smooth(method = "lm", colour = colours_memorylab[1]) +
+  geom_point(alpha = .25) +
+  labs(x = "Number of practice sessions", y = "Change in test score", colour = "Topic", caption = "Data from noorderpoort.memorylab.app") +
+  scale_colour_viridis_d() +
+  theme_ml()
+```
+
+It looks like there might be a positive effect of practice.
+Let's look at it more simply:
+Is there a relation between score change and whether or not the student has practiced the topic at all?
+```{r}
+np_scores_and_practice[, did_practice := n_responses > 0]
+
+avg_score_change <- np_scores_and_practice[, .(mean_score_test_change = mean(score_test_change)), by = .(topic, topic_label, did_practice)]
+
+ggplot(np_scores_and_practice, aes(x = did_practice, y = score_test_change)) +
+  facet_wrap(~ topic) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_violin(fill = "midnightblue", width = .25, alpha = .8) +
+  geom_point(data = avg_score_change, aes(y = mean_score_test_change), size = 2, fill = "white", pch = 21) +
+  geom_label(data = avg_score_change, aes(y = mean_score_test_change, label = round(mean_score_test_change, 2)), nudge_x = .33) +
+  scale_x_discrete(labels = c("No", "Yes")) +
+  labs(x = "Did the student practice the topic?", y = "Change in test score", colour = "Topic", caption = "Data from noorderpoort.memorylab.app") +
+  theme_ml()
+
+```
+
+Average change:
+```{r}
+np_scores_and_practice[, .(N = .N, mean_score_test_change = mean(score_test_change), sd_score_test_change = sd(score_test_change)), by = .(topic, topic_label, did_practice)]
+```
+
+Is there a significant difference in score change between students who practiced and those who didn't, taking into account differences in score on the first test?
+```{r}
+library(lmerTest)
+
+lmer(score_test_change ~ did_practice*score_test_1 + (1 | user_id), data = np_scores_and_practice) |>
+  summary()
+```
+Yes: practicing is associated with an increase in score change of .96; scoring a point higher on test 1 is associated with a lower score change (-.30).
+
+```{r}
+lmer(score_test_change ~ did_practice*topic + (1 | user_id), data = np_scores_and_practice) |>
+  summary()
+```
+
+
+
+
+On some topics, performance on the pretest was already really high, in which case we would not expect much improvement from practice.
+Let's look at the relation between pretest score and score change, taking into account whether the student practiced or not:
+```{r}
+ggplot(np_scores_and_practice, aes(x = score_test_1, y = score_test_2, colour = did_practice)) +
+  facet_wrap(~ topic, ncol = 5) +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  geom_smooth(method = "lm") +
+  geom_point(alpha = .25) +
+  labs(x = "Pretest score", y = "Posttest score", colour = "Did the student\npractice the topic?", caption = "Data from noorderpoort.memorylab.app") +
+  theme_ml() +
+  coord_fixed(xlim = c(0, 4), ylim = c(0, 4))
+```
+
+
+Let's look at performance during practice.
+Accuracy by topic:
+```{r}
+ggplot(np_practice_stats, aes(x = as.character(topic), y = accuracy, fill = topic)) +
+  geom_boxplot() +
+  geom_jitter(width = .1, height = 0, alpha = .5) +
+  labs(x = "Topic", y = "Accuracy", fill = "Topic") +
+  scale_y_continuous(limits = c(.4, 1), labels = scales::percent) +
+  scale_fill_viridis_d() +
+  guides(fill = "none") +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey"))
+```
+
+Accuracy by user:
+```{r}
+np_practice_stats[n_responses > 10, .(mean_accuracy = mean(accuracy), sd_accuracy = sd(accuracy)), by = .(user_id)]
+
+ggplot(np_practice_stats[n_responses > 10], aes(x = reorder(as.character(user_id), accuracy), y = accuracy)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(aes(colour = as.character(topic)), width = .1, height = 0, alpha = .25) +
+  labs(x = "Student", y = "Accuratesse", colour = "Onderwerp") +
+  scale_y_continuous(limits = c(.4, 1), labels = scales::percent) +
+  scale_colour_viridis_d() +
+  guides(fill = "none") +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey"),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+```
+
+Speed of forgetting by fact and topic:
+```{r}
+np_fact_ids <- unique(np_responses$fact_id)
+np_facts <- query_db(paste0("SELECT id AS fact_id, text FROM fact WHERE id IN (", paste(np_fact_ids, collapse = ", "), ")"), database = "ssaas")
+np_facts[, text := gsub("\\+", " ", text)]
+np_facts[, text := URLdecode(text)]
+np_facts[, text := gsub("\n", " ", text, fixed = TRUE)]
+np_facts[, text := gsub("＋", "+", text, fixed = TRUE)]
+
+np_responses <- merge(np_responses, np_facts, by = "fact_id")
+
+np_sof <- np_responses[, .(final_alpha = alpha[which.max(presentation_start_time)]), by = .(text, topic, user_id)]
+np_sof_avg <- np_sof[, .(N = .N, sof_mean = mean(final_alpha), sof_se = sd(final_alpha)/sqrt(.N)), by = .(text, topic)]
+```
+
+```{r fig.height = 15, fig.width = 8}
+ggplot(np_sof_avg[N > 10], aes(x = sof_mean, y = tidytext::reorder_within(text, sof_mean, as.character(topic)), alpha = N)) +
+  facet_grid(as.character(topic) ~ ., scales = "free_y") +
+  geom_errorbarh(aes(xmin = sof_mean - sof_se, xmax = sof_mean + sof_se), height = 0, colour = colours_memorylab[5]) +
+  geom_point(colour = colours_memorylab[5]) +
+  labs(y = "Feit", x = "Vergeetsnelheid (hoger = moeilijker)", alpha = "Geoefend door\naantal studenten") +
+  theme_ml() +
+  scale_x_continuous(limits = c(.1, .5)) +
+  tidytext::scale_y_reordered() +
+  theme(axis.text.y = element_text(size = 4),
+        panel.grid.major.x = element_line(colour = "grey90"))
+
+ggsave(here("output", "sof_by_fact_and_topic.png"), height = 15, width = 8)
+```
+
+
+
+
+# Conclusies Noorderpoort
+
+Studenten scoren gemiddeld lager op de posttest dan op de nulmeting.
+
+Er zijn een aantal factoren die een rol spelen:
+
+   - Studenten hebben niet zo veel geoefend.
+   - De oefening die wel gebeurde vond over het algemeen vrij ver van de posttest plaats.
+   - Het startniveau van deze studenten was al vrij hoog, waardoor er minder ruimte voor verbetering was, en extra oefening in deze vorm wellicht niet zo zinvol was.
+   - Als we kijken naar de combinatie van testscores en oefenactiviteit op individuele onderdelen, zien we een aantal patronen:
+    - Veel oefening gebeurde op onderdelen waar het startniveau al hoog was, zoals Afronden, Aftrekken & Optellen, 
+
+
+---
+
+
+# Alfa college
+
+```{r}
+alfa_domain <- query_db("SELECT * FROM domain WHERE name = 'alfa.memorylab.app';", database = "slimstampen")
+```
+
+Users registered on this domain:
+```{r}
+alfa_users <- query_db(paste0("SELECT id AS user_id FROM users WHERE domain_id = ", alfa_domain$id, ";"), database = "slimstampen")
+```
+
+Lessons on this domain:
+```{r}
+alfa_lessons <- query_db(paste0("SELECT * FROM lesson WHERE domain_id = ", alfa_domain$id, ";"), database = "slimstampen")
+```
+
+Sessions from users on this domain during the pilot period:
+```{r}
+alfa_sessions <- query_db(paste0("SELECT * FROM session WHERE token_id = 2 AND user_id IN (", paste(alfa_users$user_id, collapse = ", "), ");"), database = "ssaas")
+alfa_sessions <- alfa_sessions[create_time > "2024-11-01"]
+```
+
+When were these sessions?
+```{r}
+alfa_sessions[, session_date := as.Date(create_time)]
+
+ggplot(alfa_sessions, aes(x = session_date)) +
+  geom_histogram(binwidth = 1, fill = colours_memorylab[1]) +
+  labs(x = "Date", y = "Sessions per day", caption = "Data from alfa.memorylab.app") +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey90"))
+```
+
+Most popular days:
+```{r}
+alfa_sessions[, .N, by = .(session_date)][order(-N)]
+```
+Total sessions:
+```{r}
+nrow(alfa_sessions)
+```
+
+Sessions per user:
+```{r}
+alfa_sessions[, .N, by = user_id][order(-N)]
+```
+
+Total users with at least one session:
+```{r}
+length(unique(alfa_sessions$user_id))
+```
+
+
+Which lessons did users do? Parse the session context:
+```{r}
+alfa_sessions_parsed <- alfa_sessions[, map_dfr(context, fromJSON)] |> setDT()
+```
+
+```{r}
+alfa_sessions_parsed[, .(`Keer geoefend` = .N), by = .(Les = title)][order(-`Keer geoefend`)] |> knitr::kable()
+```
+
+Mastery credits:
+```{r}
+alfa_credits <- query_db(paste0("SELECT * FROM lesson_mastered WHERE user_id IN (", paste(alfa_users$user_id, collapse = ", "), ");"), database = "slimstampen")
+```
+
+Add lesson titles:
+```{r}
+alfa_credits <- merge(alfa_credits, alfa_lessons[, .(lesson_id = id, title)])
+```
+
+```{r}
+alfa_credits[, .N, by = .(title)][order(-N)]
+```
+
+
+
+
+```{r}
+query_db(query = "SELECT *
+FROM pg_catalog.pg_tables
+WHERE schemaname != 'pg_catalog' AND 
+    schemaname != 'information_schema';",
+         database = "slimstampen")
+```
+
