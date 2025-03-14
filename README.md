@@ -5,7 +5,7 @@ This repository contains an analysis of the practice data, the pretest and postt
 
 ## Analysis notebooks
 
-- [Practice activity](output/01_practice.md)
+- [Practice activity](output/01_practice_activity.md)
 - [Test performance](output/02_test_performance.md)
 - [Evaluation](output/03_evaluation.md)
 
