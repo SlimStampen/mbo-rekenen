@@ -1,0 +1,302 @@
+---
+title: "Test performance"
+subtitle: "MBOin2030"
+author: "Maarten van der Velde"
+date: "Last updated: `r Sys.Date()`"
+output:
+  html_notebook:
+    smart: no
+    toc: yes
+    toc_float: yes
+  github_document:
+    toc: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+library(here)
+library(data.table)
+library(ggplot2)
+library(jsonlite)
+library(purrr)
+library(lmerTest)
+library(dplyr)
+library(patchwork)
+
+theme_memorylab_url <- "https://raw.githubusercontent.com/SlimStampen/theme_memorylab/master/theme_memorylab.R"
+source(theme_memorylab_url)
+
+source(here("..", "databases", "database_functions.R"))
+
+big_mark <- ","
+fig_caption <- paste0("© 2025 MemoryLab")
+```
+
+# Get user data
+
+Practice statistics:
+```{r}
+practice_stats <- fread(here("data", "practice", "practice_stats.csv"))
+```
+
+Get the email address associated with each MemoryLab user ID so that we can link them to the test scores.
+```{r}
+np_name <- "noorderpoort.memorylab.app"
+np_id <- query_db(paste0("SELECT id FROM domain WHERE name = '", np_name, "'"), database = "slimstampen")
+np_users <- query_db(paste0("SELECT id, email FROM users WHERE domain_id = ", np_id, ";"), database = "slimstampen")
+
+ac_name <- "alfa.memorylab.app"
+ac_id <- query_db(paste0("SELECT id FROM domain WHERE name = '", ac_name, "'"), database = "slimstampen")
+ac_users <- query_db(paste0("SELECT id, email FROM users WHERE domain_id = ", ac_id, ";"), database = "slimstampen")
+```
+
+# Get test scores
+
+```{r}
+np_test_scores <- fread(here("data", "test", "noorderpoort_scores_by_topic.csv"))
+np_test_scores[, Email := tolower(trimws(Email))]
+
+# Link to MemoryLab user IDs
+np_test_scores <- merge(np_test_scores, np_users, by.x = "Email", by.y = "email", all = TRUE)
+
+ac_test_scores <- fread(here("data", "test", "alfa_scores_by_topic.csv"))
+ac_test_scores[, Email := tolower(trimws(Email))]
+
+# Link to MemoryLab user IDs
+ac_test_scores <- merge(ac_test_scores, ac_users, by.x = "Email", by.y = "email", all = TRUE)
+
+# Combine
+np_test_scores[, school := "Noorderpoort"]
+ac_test_scores[, school := "Alfa-college"]
+test_scores <- rbind(np_test_scores, ac_test_scores)
+test_scores[, test := factor(test, levels = c("Pretest", "Posttest"), labels = c("Nulmeting", "Nameting"))]
+```
+
+For this analysis we'll only include users of whom we have two test scores as well as some MemoryLab practice data.
+```{r}
+test_scores[, did_ml := !is.na(id)]
+test_scores[, two_tests := uniqueN(test) == 2 && !any(is.na(score)), by = .(id)]
+test_scores[, include_user := did_ml & two_tests]
+```
+
+How many complete cases do we have?
+```{r}
+test_scores[include_user == TRUE, uniqueN(id), by = .(school)]
+```
+
+
+
+# Mean scores
+
+Mean test scores from included students:
+```{r fig.width = 5, fig.height = 4}
+test_scores_summary <-test_scores[include_user == TRUE & component == "Totaal punten"]
+max_score <- 40
+test_scores_summary[, grade := (score/max_score) * 10] # Convert to a grade on a scale of 0-10.
+
+test_scores_mean <- test_scores_summary[, .(mean_grade = mean(grade), se_grade = sd(grade)/sqrt(.N), n = .N), by = .(school, test)]
+test_scores_mean
+
+pos_dodge <- position_dodge(width = .1)
+
+p_test_scores <- ggplot(test_scores_mean, aes(x = test, y = mean_grade, colour = school, group = school)) +
+  geom_line(position = pos_dodge, lty = "dashed")  +
+  geom_errorbar(aes(ymin = mean_grade - se_grade, ymax = mean_grade + se_grade), width = 0.1, position = pos_dodge) +
+  geom_point(position = pos_dodge) +
+  labs(title = "Toetscijfers",
+       x = "Toets",
+       y = "Cijfer",
+       colour = NULL) +
+  scale_y_continuous(limits = c(6, 10), breaks = seq(0, 10, 1)) +
+  scale_colour_brewer(palette = "Set1") +
+  theme_ml() +
+  theme(legend.position = c(.5, .85),
+        legend.direction = "horizontal",
+        legend.background = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey90"))
+
+p_test_scores
+ggsave(here("output", "test_scores.png"), width = 5, height = 4)
+```
+
+Is there a significant change in the grade between the tests?
+```{r}
+# Noorderpoort
+t.test(
+  test_scores_summary[school == "Noorderpoort" & test == "Nulmeting", grade],
+  test_scores_summary[school == "Noorderpoort" & test == "Nameting", grade],
+  paired = TRUE
+)
+
+# Alfa-college
+t.test(
+  test_scores_summary[school == "Alfa-college" & test == "Nulmeting", grade],
+  test_scores_summary[school == "Alfa-college" & test == "Nameting", grade],
+  paired = TRUE
+)
+```
+
+# Relationship between practice and test scores
+
+Get scores per topic and merge with practice statistics.
+```{r}
+scores_by_topic_long <- test_scores[include_user == TRUE & !component %in% c("Totaal punten", "Cijfer"), .(
+  user_id = id,
+  topic = component,
+  score,
+  test
+)]
+
+scores_by_topic <- dcast(scores_by_topic_long, user_id + topic ~ test, value.var = "score")
+scores_by_topic[, score_change := Nameting - Nulmeting]
+
+
+scores_practice <- merge(scores_by_topic, practice_stats, by = c("user_id", "topic"), all.x = TRUE)
+```
+
+
+Scores by topic:
+```{r fig.width = 10, fig.height = 4}
+mean_scores <- scores_by_topic_long[, .(score = mean(score)), by = .(test, topic)]
+
+mean_scores[order(test, score)]
+
+p_scores_topic <- ggplot(scores_by_topic_long, aes(x = test, y = score)) +
+  facet_wrap(~ topic, ncol = 5) +
+  geom_point(alpha = .4, size = .5) +
+  geom_line(aes(group = user_id), alpha = .4, lty = 3) +
+  geom_point(data = mean_scores, colour = colours_memorylab[1], size = 2.5) +
+  geom_line(data = mean_scores, aes(group = topic), colour = colours_memorylab[1], lwd = 1) +
+  scale_x_discrete(labels = c("Nulmeting   ", "   Nameting")) +
+  labs(x = "Toets", y = "Score", title = "Toetsscores per onderwerp") +
+  theme_ml() +
+  theme(strip.text = element_text(face = "bold"),
+        strip.background = element_rect(fill = "grey90"),
+        panel.grid.major.y = element_line(colour = "grey90"))
+
+p_scores_topic
+```
+
+Are any of these differences between the tests significant?
+```{r}
+lmer(score ~ test*topic + (1|user_id), data = scores_by_topic_long) |>
+  summary()
+```
+
+
+
+
+Each student practiced only some of the topics, so per student we can compare the score change on topics they practiced to topics they did not practice.
+```{r fig.width = 10, fig.height = 4}
+scores_practice[, practiced := !is.na(duration)]
+
+scores_by_practice_status <- scores_practice[, .(
+  mean_score_change = mean(score_change, na.rm = TRUE),
+  se_score_change = sd(score_change, na.rm = TRUE)/sqrt(.N),
+  n = .N
+), by = .(user_id, practiced, `Score op\nnulmeting` = Nulmeting)]
+
+
+p_scores_by_practice <- ggplot(scores_by_practice_status, aes(x = practiced, y = mean_score_change, fill = practiced)) +
+  facet_grid(~ `Score op\nnulmeting`, labeller = labeller(`Score op\nnulmeting` = label_both)) +
+  geom_hline(yintercept = seq(-4, 4, 1), colour = "grey90") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_boxplot(width = .5, outlier.shape = NA) +
+  geom_jitter(width = .1, height = .1, alpha = .5) +
+  labs(x = "Onderwerp met MemoryLab geoefend",
+       y = "Verandering in score",
+       title = "Effect van oefening op leeruitkomst") +
+  guides(fill = "none") +
+  scale_fill_brewer(palette = "Paired") +
+  scale_x_discrete(labels = c("Nee", "Ja")) +
+  theme_ml() +
+  theme(strip.text = element_text(face = "bold"),
+        strip.background = element_rect(fill = "grey90"),
+        panel.grid.major.y = element_line(colour = "grey90"))
+
+p_scores_by_practice
+
+ggsave(here("output", "score_change_by_practice.png"), width = 10, height = 4)
+```
+
+Is this effect significant? Yes:
+```{r}
+m_score_change <- lmer(score_change ~ practiced + practiced:z_nulmeting + (1|user_id), data = scores_practice |> mutate(z_nulmeting = scale(Nulmeting)))
+summary(m_score_change)
+```
+
+There is an overall positive effect of practice, and this effect is stronger for topics where the initial score was lower.
+
+
+# Did students practice what they found difficult?
+
+Ideally, students would practice the topics on which they scored lowest in the pretest.
+```{r}
+prescores_practice <- scores_practice[, .(pre_score = mean(Nulmeting)), by = .(practiced, user_id)]
+prescores_practice[, .(mean_pre_score = mean(pre_score)), by = .(practiced)]
+
+lmer(pre_score ~ practiced + (1 | user_id), data = prescores_practice) |>
+  summary()
+```
+
+There was no significant difference in prescores however, between topics that students did practice and topics that they did not.
+
+Provided that students did practice a topic, did they spend more time on topics with lower pretest scores? No:
+
+```{r}
+lmer(n_responses ~ Nulmeting + (1 | user_id), data = scores_practice[practiced == TRUE]) |>
+  summary()
+```
+
+
+```{r fig.width = 10, fig.height = 4}
+ggplot(scores_practice[practiced == TRUE], aes(x = as.factor(Nulmeting), y = n_responses)) +
+  geom_boxplot(width = .5, outlier.shape = NA) +
+  geom_jitter(width = .1, height = .1, alpha = .5) +
+  labs(x = "Score op nulmeting",
+       y = "Aantal gemaakte oefeningen") +
+  scale_x_discrete() +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey90"))
+
+```
+
+Visualise the relation between pretest scores and practice activity per topic.
+```{r fig.width = 10, fig.height = 4}
+p_practice <- scores_practice[practiced == TRUE, .(n_sessions_total = sum(n_sessions)), by = .(topic, Nulmeting)] |>
+  ggplot(aes(x = Nulmeting, y = n_sessions_total)) +
+  facet_wrap(~ topic, ncol = 5) +
+  geom_col(aes(fill = as.factor(Nulmeting)), colour = "black", alpha = .8) +
+  scale_fill_brewer(palette = "RdYlGn") +
+  guides(fill = "none") +
+  labs(x = "Score op nulmeting", y = "Aantal MemoryLab oefensessies", colour = "Onderwerp", title = "Oefenactiviteit per onderwerp") +
+  theme_ml() +
+  theme(panel.grid.major.y = element_line(colour = "grey90"),
+        strip.text = element_text(face = "bold"),
+        strip.background = element_rect(fill = "grey90"))
+
+p_practice
+
+ggsave(here("output", "practice_activity.png"), width = 10, height = 4)
+```
+Total sessions by topic:
+```{r}
+scores_practice[practiced == TRUE, .(n_sessions_total = sum(n_sessions)), by = .(topic)][order(-n_sessions_total)]
+```
+
+Total sessions by pretest score:
+```{r}
+scores_practice[practiced == TRUE, .(n_sessions_total = sum(n_sessions)), by = .(Nulmeting)][order(-n_sessions_total)]
+```
+
+
+# Combination plot
+```{r fig.width = 10, fig.height = 12}
+((p_test_scores + plot_spacer() + plot_layout(widths = c(1, 2)))  / p_scores_topic / p_practice / p_scores_by_practice) + plot_annotation(tag_levels =  "A", theme = theme_ml()) & theme(
+    plot.tag = element_text(face = "bold")
+  )
+ggsave(here("output", "test_scores_and_practice.png"), width = 10, height = 15)
+```
+
+
