@@ -120,6 +120,9 @@ p_test_scores
 ggsave(here("output", "test_scores.png"), width = 5, height = 4)
 ```
 
+![](../output/test_scores.png)
+
+
 Is there a significant change in the grade between the tests?
 ```{r}
 # Noorderpoort
@@ -176,7 +179,11 @@ p_scores_topic <- ggplot(scores_by_topic_long, aes(x = test, y = score)) +
         panel.grid.major.y = element_line(colour = "grey90"))
 
 p_scores_topic
+
+ggsave(here("output", "scores_topic.png"), width = 10, height = 4)
 ```
+![](../output/scores_topic.png)
+
 
 Are any of these differences between the tests significant?
 ```{r}
@@ -219,6 +226,8 @@ p_scores_by_practice
 
 ggsave(here("output", "score_change_by_practice.png"), width = 10, height = 4)
 ```
+![](../output/score_change_by_practice.png)
+
 
 Is this effect significant? Yes:
 ```{r}
@@ -260,7 +269,10 @@ ggplot(scores_practice[practiced == TRUE], aes(x = as.factor(Nulmeting), y = n_r
   theme_ml() +
   theme(panel.grid.major.y = element_line(colour = "grey90"))
 
+ggsave(here("output", "n_responses_by_score.png"), width = 10, height = 4)
 ```
+
+![](../output/n_responses_by_score.png)
 
 Visualise the relation between pretest scores and practice activity per topic.
 ```{r fig.width = 10, fig.height = 4}
@@ -280,6 +292,9 @@ p_practice
 
 ggsave(here("output", "practice_activity.png"), width = 10, height = 4)
 ```
+![](../output/practice_activity.png)
+
+
 Total sessions by topic:
 ```{r}
 scores_practice[practiced == TRUE, .(n_sessions_total = sum(n_sessions)), by = .(topic)][order(-n_sessions_total)]
@@ -299,4 +314,4 @@ scores_practice[practiced == TRUE, .(n_sessions_total = sum(n_sessions)), by = .
 ggsave(here("output", "test_scores_and_practice.png"), width = 10, height = 15)
 ```
 
-
+![](../output/test_scores_and_practice.png)

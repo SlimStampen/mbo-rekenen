@@ -357,6 +357,8 @@ ggplot(topic_freq, aes(x = reorder(topic, N), y = N)) +
 ggsave(here("output", "memorylab_oefensessies_gecombineerd.png"), width = 10, height = 4)
 ```
 
+![](../output/memorylab_oefensessies_gecombineerd.png)
+
 ## Time
 
 When did students practice with MemoryLab?
@@ -399,6 +401,8 @@ ggplot(session_dates, aes(x = days_until_posttest, fill = school)) +
 ``` r
 ggsave(here("output", "memorylab_oefensessies_per_dag.png"), width = 10, height = 4)
 ```
+
+![](../output/memorylab_oefensessies_per_dag.png)
 
 ## Students
 
@@ -450,11 +454,18 @@ ggplot(practice_stats, aes(x = n_sessions, fill = school)) +
        x = "Aantal oefensessies",
        y = "Aantal studenten",
        fill = NULL) +
+  scale_fill_brewer(palette = "Set1") +
   guides(fill = "none") +
   theme_ml()
 ```
 
 ![](/Users/maarten/Documents/projects/mbo-rekenen/output/01_practice_activity_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+``` r
+ggsave(here("output", "memorylab_oefensessies_per_onderwerp.png"), width = 10, height = 4)
+```
+
+![](../output/memorylab_oefensessies_per_onderwerp.png)
 
 Number of responses *per topic*:
 
@@ -466,11 +477,18 @@ ggplot(practice_stats, aes(x = n_responses, fill = school)) +
        x = "Aantal antwoorden",
        y = "Aantal studenten",
        fill = NULL) +
+  scale_fill_brewer(palette = "Set1") +
   guides(fill = "none") +
   theme_ml()
 ```
 
 ![](/Users/maarten/Documents/projects/mbo-rekenen/output/01_practice_activity_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+``` r
+ggsave(here("output", "memorylab_antwoorden_per_onderwerp.png"), width = 10, height = 4)
+```
+
+![](../output/memorylab_antwoorden_per_onderwerp.png)
 
 Practice duration *per topic*:
 
@@ -483,11 +501,19 @@ ggplot(practice_stats[duration < 100], aes(x = duration, fill = school)) +
        y = "Aantal studenten",
        fill = NULL,
        caption = "Niet getoond: 1 student met een oefenduur van 444 minuten.") +
+  scale_fill_brewer(palette = "Set1") +
   guides(fill = "none") +
   theme_ml()
 ```
 
 ![](/Users/maarten/Documents/projects/mbo-rekenen/output/01_practice_activity_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+``` r
+ggsave(here("output", "memorylab_oefenduur_per_onderwerp.png"), width = 10, height = 4)
+```
+
+![](../output/memorylab_oefenduur_per_onderwerp.png)
+
 Accuracy *per topic*:
 
 ``` r
@@ -499,6 +525,7 @@ ggplot(practice_stats, aes(x = accuracy, fill = school)) +
        y = "Aantal studenten",
        fill = NULL) +
   scale_x_continuous(limits = c(-0.05, 1.05), labels = scales::percent_format()) +
+  scale_fill_brewer(palette = "Set1") +
   guides(fill = "none") +
   theme_ml()
 ```
@@ -507,6 +534,16 @@ ggplot(practice_stats, aes(x = accuracy, fill = school)) +
     ## range (`geom_bar()`).
 
 ![](/Users/maarten/Documents/projects/mbo-rekenen/output/01_practice_activity_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+``` r
+ggsave(here("output", "memorylab_accuratesse_per_onderwerp.png"), width = 10, height = 4)
+```
+
+    ## Warning: Removed 4 rows containing missing values or values outside the scale
+    ## range (`geom_bar()`).
+
+![](../output/memorylab_accuratesse_per_onderwerp.png)
+
 Save practice statistics for further analysis.
 
 ``` r

@@ -78,6 +78,8 @@ ggplot(q1, aes(x = reorder(Antwoord, freq), y = freq)) +
 ggsave(here("output", "evaluatie_leskeuze.png"), width = 10, height = 4)
 ```
 
+![](../output/evaluatie_leskeuze.png)
+
 What proportion of students made a choice based on difficulty?
 
 ``` r
@@ -111,6 +113,8 @@ ggplot(q2_rank, aes(x = reorder(topic, -mean_rank), y = mean_rank)) +
 ``` r
 ggsave(here("output", "evaluatie_onderwerp.png"), width = 10, height = 4)
 ```
+
+![](../output/evaluatie_onderwerp.png)
 
 ## Geef MemoryLab een cijfer
 
@@ -148,6 +152,8 @@ ggplot(q3, aes(x = grade, y = freq)) +
 ggsave(here("output", "evaluatie_cijfer.png"), width = 10, height = 4)
 ```
 
+![](../output/evaluatie_cijfer.png)
+
 ## Zou je deze leermethode ook willen gebruiken voor andere rekenlesstof?
 
 ``` r
@@ -183,8 +189,8 @@ wordcloud2(q1_words,
            )
 ```
 
-<div class="wordcloud2 html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-0b197131a87aca113ed9" style="width:1152px;height:1152px;"></div>
-<script type="application/json" data-for="htmlwidget-0b197131a87aca113ed9">{"x":{"word":["makkelijk","overzichtelijk","duidelijk","oefenen","fijn","mee","goed","herhaling","werken","leert","overzicht","dingen","echt","gewoon","heel","ingedeeld","kunt","lekker","leren","leuk","makelijk","moeilijk","online","systeem","verschillende","vragen","waar","wel","1","basis","beetje","begin","bent","best","beter","dezeldfde","doent","eigen","elke","enz","erg","fout","gebruiken","gemakkelijk","genoeg","haalt","handig","hebt","heen","helpt","herhaald","herhalen","herhallen","inmiddels","inzien","keuze","kiezen","kijken","kreeg","makkelijke","makkkeeeelijkkk","meerde","minder","moeilijksheidgradaties","moelijk","moeten","nie","niveau","oevenen","onderwerp","onthouden","opdrachten","opties","plek","prima","programma","rekenen","resultaten","simpel","slecht","snel","super","tijd","uitgebreid","vaak","vind","vraag","weet","werden","wilt","zat"],"freq":[19,16,10,7,6,5,4,4,4,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"fontFamily":"Segoe UI","fontWeight":"bold","color":"random-dark","minSize":4,"weightFactor":37.89473684210526,"backgroundColor":"white","gridSize":0,"minRotation":-0.7853981633974483,"maxRotation":0.7853981633974483,"shuffle":false,"rotateRatio":0.4,"shape":"circle","ellipticity":0.65,"figBase64":null,"hover":null},"evals":[],"jsHooks":{"render":[{"code":"function(el,x){\n                        console.log(123);\n                        if(!iii){\n                          window.location.reload();\n                          iii = False;\n\n                        }\n  }","data":null}]}}</script>
+<div class="wordcloud2 html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-b4a38b9ff43093150e2a" style="width:1152px;height:1152px;"></div>
+<script type="application/json" data-for="htmlwidget-b4a38b9ff43093150e2a">{"x":{"word":["makkelijk","overzichtelijk","duidelijk","oefenen","fijn","mee","goed","herhaling","werken","leert","overzicht","dingen","echt","gewoon","heel","ingedeeld","kunt","lekker","leren","leuk","makelijk","moeilijk","online","systeem","verschillende","vragen","waar","wel","1","basis","beetje","begin","bent","best","beter","dezeldfde","doent","eigen","elke","enz","erg","fout","gebruiken","gemakkelijk","genoeg","haalt","handig","hebt","heen","helpt","herhaald","herhalen","herhallen","inmiddels","inzien","keuze","kiezen","kijken","kreeg","makkelijke","makkkeeeelijkkk","meerde","minder","moeilijksheidgradaties","moelijk","moeten","nie","niveau","oevenen","onderwerp","onthouden","opdrachten","opties","plek","prima","programma","rekenen","resultaten","simpel","slecht","snel","super","tijd","uitgebreid","vaak","vind","vraag","weet","werden","wilt","zat"],"freq":[19,16,10,7,6,5,4,4,4,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"fontFamily":"Segoe UI","fontWeight":"bold","color":"random-dark","minSize":4,"weightFactor":37.89473684210526,"backgroundColor":"white","gridSize":0,"minRotation":-0.7853981633974483,"maxRotation":0.7853981633974483,"shuffle":false,"rotateRatio":0.4,"shape":"circle","ellipticity":0.65,"figBase64":null,"hover":null},"evals":[],"jsHooks":{"render":[{"code":"function(el,x){\n                        console.log(123);\n                        if(!iii){\n                          window.location.reload();\n                          iii = False;\n\n                        }\n  }","data":null}]}}</script>
 
 ``` r
 # Take screenshot of viewer to save
@@ -211,8 +217,8 @@ wordcloud2(q2_words,
 )
 ```
 
-<div class="wordcloud2 html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-5e08d345b3db6ca6e47a" style="width:1152px;height:1152px;"></div>
-<script type="application/json" data-for="htmlwidget-5e08d345b3db6ca6e47a">{"x":{"word":["makkelijk","vragen","fout","makkelijke","gelijk","herhaling","lang","teken","vaak","antwoord","duurt","euro","hele","hetzelfde","sommen","soms","vergat","zelfde","zien","10","best","bijvoorbeeld","dezelfde","domme","goed","heel","kiezen","kreeg","moeilijker","papier","uitleg","voordat","vraag","wel","00","aftrekken","alleen","alsnog","antwoorde","antwoorden","basischool","basisschool","beetje","bent","comma's","constant","dingen","dingetjes","duurden","eigenlijk","gaat","geacht","gegeven","geleerd","genoeg","gerekend","gesteld","getalle","ging","goede","goeie","herhaalde","herhaalt","herhalen","herlaling","invuld","jhiuoi","klaar","klikt","leert","liever","mocht","net","niks","niveau","nou","oefent","onderwerpen","online","opdr","opdrachten","optellen","punten","saaaaai","saai","saaie","schreef","schrijf","schrijven","simpel","snel","sommige","staat","stom","stond","telkens","tevaak","teveel","tijd","uitdagend","uitdaging","vervelend","vond","vooral","waarom","wanneer","weinig","werden","word","yte","zichtbaar","zodat"],"freq":[12,11,9,5,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"fontFamily":"Segoe UI","fontWeight":"bold","color":"random-dark","minSize":4,"weightFactor":60,"backgroundColor":"white","gridSize":0,"minRotation":-0.7853981633974483,"maxRotation":0.7853981633974483,"shuffle":false,"rotateRatio":0.4,"shape":"circle","ellipticity":0.65,"figBase64":null,"hover":null},"evals":[],"jsHooks":{"render":[{"code":"function(el,x){\n                        console.log(123);\n                        if(!iii){\n                          window.location.reload();\n                          iii = False;\n\n                        }\n  }","data":null}]}}</script>
+<div class="wordcloud2 html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-c4954d8a291528a5105d" style="width:1152px;height:1152px;"></div>
+<script type="application/json" data-for="htmlwidget-c4954d8a291528a5105d">{"x":{"word":["makkelijk","vragen","fout","makkelijke","gelijk","herhaling","lang","teken","vaak","antwoord","duurt","euro","hele","hetzelfde","sommen","soms","vergat","zelfde","zien","10","best","bijvoorbeeld","dezelfde","domme","goed","heel","kiezen","kreeg","moeilijker","papier","uitleg","voordat","vraag","wel","00","aftrekken","alleen","alsnog","antwoorde","antwoorden","basischool","basisschool","beetje","bent","comma's","constant","dingen","dingetjes","duurden","eigenlijk","gaat","geacht","gegeven","geleerd","genoeg","gerekend","gesteld","getalle","ging","goede","goeie","herhaalde","herhaalt","herhalen","herlaling","invuld","jhiuoi","klaar","klikt","leert","liever","mocht","net","niks","niveau","nou","oefent","onderwerpen","online","opdr","opdrachten","optellen","punten","saaaaai","saai","saaie","schreef","schrijf","schrijven","simpel","snel","sommige","staat","stom","stond","telkens","tevaak","teveel","tijd","uitdagend","uitdaging","vervelend","vond","vooral","waarom","wanneer","weinig","werden","word","yte","zichtbaar","zodat"],"freq":[12,11,9,5,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"fontFamily":"Segoe UI","fontWeight":"bold","color":"random-dark","minSize":4,"weightFactor":60,"backgroundColor":"white","gridSize":0,"minRotation":-0.7853981633974483,"maxRotation":0.7853981633974483,"shuffle":false,"rotateRatio":0.4,"shape":"circle","ellipticity":0.65,"figBase64":null,"hover":null},"evals":[],"jsHooks":{"render":[{"code":"function(el,x){\n                        console.log(123);\n                        if(!iii){\n                          window.location.reload();\n                          iii = False;\n\n                        }\n  }","data":null}]}}</script>
 
 ``` r
 # Take screenshot of viewer to save

@@ -52,6 +52,8 @@ ggplot(q1, aes(x = reorder(Antwoord, freq), y = freq)) +
 
 ggsave(here("output", "evaluatie_leskeuze.png"), width = 10, height = 4)
 ```
+![](../output/evaluatie_leskeuze.png)
+
 What proportion of students made a choice based on difficulty?
 ```{r}
 q1[1:3, sum(freq)]
@@ -80,6 +82,7 @@ ggplot(q2_rank, aes(x = reorder(topic, -mean_rank), y = mean_rank)) +
 
 ggsave(here("output", "evaluatie_onderwerp.png"), width = 10, height = 4)
 ```
+![](../output/evaluatie_onderwerp.png)
 
 ## Geef MemoryLab een cijfer
 
@@ -104,6 +107,7 @@ ggplot(q3, aes(x = grade, y = freq)) +
 
 ggsave(here("output", "evaluatie_cijfer.png"), width = 10, height = 4)
 ```
+![](../output/evaluatie_cijfer.png)
 
 ## Zou je deze leermethode ook willen gebruiken voor andere rekenlesstof?
 ```{r}

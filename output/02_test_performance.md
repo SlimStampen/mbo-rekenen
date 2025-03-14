@@ -142,6 +142,8 @@ p_test_scores
 ggsave(here("output", "test_scores.png"), width = 5, height = 4)
 ```
 
+![](../output/test_scores.png)
+
 Is there a significant change in the grade between the tests?
 
 ``` r
@@ -259,6 +261,15 @@ p_scores_topic
 
 ![](/Users/maarten/Documents/projects/mbo-rekenen/output/02_test_performance_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
+``` r
+ggsave(here("output", "scores_topic.png"), width = 10, height = 4)
+```
+
+    ## Don't know how to automatically pick scale for object of type <integer64>.
+    ## Defaulting to continuous.
+
+![](../output/scores_topic.png)
+
 Are any of these differences between the tests significant?
 
 ``` r
@@ -373,6 +384,8 @@ p_scores_by_practice
 ``` r
 ggsave(here("output", "score_change_by_practice.png"), width = 10, height = 4)
 ```
+
+![](../output/score_change_by_practice.png)
 
 Is this effect significant? Yes:
 
@@ -520,6 +533,12 @@ ggplot(scores_practice[practiced == TRUE], aes(x = as.factor(Nulmeting), y = n_r
 
 ![](/Users/maarten/Documents/projects/mbo-rekenen/output/02_test_performance_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
+``` r
+ggsave(here("output", "n_responses_by_score.png"), width = 10, height = 4)
+```
+
+![](../output/n_responses_by_score.png)
+
 Visualise the relation between pretest scores and practice activity per
 topic.
 
@@ -544,6 +563,8 @@ p_practice
 ``` r
 ggsave(here("output", "practice_activity.png"), width = 10, height = 4)
 ```
+
+![](../output/practice_activity.png)
 
 Total sessions by topic:
 
@@ -597,3 +618,5 @@ ggsave(here("output", "test_scores_and_practice.png"), width = 10, height = 15)
 
     ## Don't know how to automatically pick scale for object of type <integer64>.
     ## Defaulting to continuous.
+
+![](../output/test_scores_and_practice.png)
